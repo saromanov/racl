@@ -1,9 +1,5 @@
 use std;
 use std::collections::HashMap;
-// https://fasterthanli.me/articles/a-half-hour-to-learn-rust
-
-//https://github.com/kildevaeld/go-acl/blob/master/acl.go
-//https://rust-unofficial.github.io/patterns/intro.html
 
 pub trait Store {
     fn new() -> Self;
@@ -116,9 +112,15 @@ impl<T:Store> Acl<T> {
         let role_obj = self.store.get_role(role);
         match role_obj {
             Ok(role) => {
-                let permisions = role.permissions;
-                let result = permisions.iter().any(|x| x.action == action && x.resource == resource);
-                result
+                match role.permissions.iter().any(|x| x.action == action && x.resource == resource) {
+                    true => true,
+                    _ => {
+                        if role.parent != "" {
+                            return self.available(role.parent.as_str(), action, resource)
+                        }
+                        false
+                    }
+                }
             },
             Err(err) => {
                 false
@@ -138,7 +140,9 @@ mod tests {
         acl.add_role("guest", "");
         acl.add_role("user", "guest");
         acl.allow(vec!["user"], "comment", "foobar");
+        acl.allow(vec!["guest"], "comment", "news");
         assert_eq!(acl.available("user", "comment", "foobar"), true);
+        assert_eq!(acl.available("user", "comment", "news"), true);
         assert_eq!(acl.available("user", "comment", "foobar2"), false);
     }
 }
