@@ -111,17 +111,17 @@ impl<T:Store> Acl<T> {
         }
     }
 
-    pub fn available(&mut self, role: &str, action: &str, resource: &str) {
+    pub fn available(&mut self, role: &str, action: &str, resource: &str) -> bool {
         assert!(self.store.exists(role));
         let role_obj = self.store.get_role(role);
         match role_obj {
             Ok(role) => {
                 let permisions = role.permissions;
                 let result = permisions.iter().any(|x| x.action == action && x.resource == resource);
-                println!("{}", result);
+                result
             },
             Err(err) => {
-                println!("{}", err);
+                false
             }
         }
 
@@ -130,8 +130,15 @@ impl<T:Store> Acl<T> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn basic() {
+        let store = Mem::new();
+        let mut acl = Acl::new(store);
+        acl.add_role("guest", "");
+        acl.add_role("user", "guest");
+        acl.allow(vec!["user"], "comment", "foobar");
+        assert_eq!(acl.available("user", "comment", "foobar"), true);
+        assert_eq!(acl.available("user", "comment", "foobar2"), false);
     }
 }
